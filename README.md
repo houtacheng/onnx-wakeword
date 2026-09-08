@@ -99,6 +99,8 @@ Held-out Azure TTS, 400 samples × varied speed/pitch/volume; sliding-window pea
 
 > Numbers above are measured on the **hard-negative held-out corpus** (speech + music + mixed audio, deliberately selected easily-mis-triggered content) — the **worst case**. On clean public read speech (AISHELL-1) the rates are lower (你好小娜: baseline 278.7 → optimized 0.6 triggers/hour).
 
+> All tables above are **bare-model** numbers (detection layers off). The runtime anti-false-trigger layers cut the rate further — with L1 consecutive-frames only (on by default), the optimized 你好小娜 drops from 10.3 to **4.9 triggers/hour** on a 10-hour general Chinese speech/music corpus, before stacking any other layer (L3/L5/...).
+
 > **False-trigger optimized edition**: once a keyword model is trained, one click starts the optimization — the trained model scans its negative audio corpus, finds the segments it wrongly scores as wake words (hard negatives), and retrains with them. The model learns from its own mistakes; **no user-reported audio is required**, and recall is preserved (−91% to −98% in a single round, table above).
 
 **How to use false-trigger optimization**: after your keyword finishes training, open the Voicute console and follow:
