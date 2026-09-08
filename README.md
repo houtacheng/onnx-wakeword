@@ -97,7 +97,17 @@ Held-out Azure TTS, 400 samples × varied speed/pitch/volume; sliding-window pea
 | 小娜 | 329.5 | 7.3 | −97.8% | 98.5% → 98.3% |
 | 豆包豆包 | 81.3 | 7.2 | −91.2% | 100% → 100% |
 
+> Numbers above are measured on the **hard-negative held-out corpus** (speech + music + mixed audio, deliberately selected easily-mis-triggered content) — the **worst case**. On clean public read speech (AISHELL-1) the rates are lower (你好小娜: baseline 278.7 → optimized 0.6 triggers/hour).
+
 > **False-trigger optimized edition**: once a keyword model is trained, one click starts the optimization — the trained model scans its negative audio corpus, finds the segments it wrongly scores as wake words (hard negatives), and retrains with them. The model learns from its own mistakes; **no user-reported audio is required**, and recall is preserved (−91% to −98% in a single round, table above).
+
+**How to use false-trigger optimization**: after your keyword finishes training, open the Voicute console and follow:
+
+```text
+My Models → False-Trigger Optimization → Negative scan → Full retrain → Download the R1 model
+```
+
+The downloaded R1 model is the false-trigger optimized edition. It loads exactly like the base model (same `model_info.json` and runtime code — no code changes needed) and runs fully offline as usual.
 
 Comparison models included in this repo (`models/zh/`):
 
@@ -106,8 +116,6 @@ Comparison models included in this repo (`models/zh/`):
 | 你好小娜 | `nihaoxiaona_r0.onnx` | `nihaoxiaona_r1.onnx` |
 | 小娜 | `xiaona_r0.onnx` | `xiaona_r1.onnx` |
 | 豆包豆包 | `doubaodoubao_r0.onnx` | `doubaodoubao_r1.onnx` |
-
-> Verify it yourself: load a keyword's baseline and optimized model one after the other and play music or a video — the baseline fires repeatedly, the optimized model stays quiet. **Baselines are for comparison only; use the optimized models in production.**
 
 > False-trigger optimization is currently production-verified on **Chinese** keywords; **English / Japanese / French / German: in development & testing.**
 
