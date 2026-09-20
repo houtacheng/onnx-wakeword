@@ -1,9 +1,9 @@
 {
   "model_type": "multi_keyword",
   "keywords": [
-    "Hey Jarvis"
+    "みらい"
   ],
-  "model_file": "heyjarvis_r1.onnx",
+  "model_file": "mirai_r1.onnx",
   "mel_time": 98,
   "cons_frames": 3,
   "n_mels": 32

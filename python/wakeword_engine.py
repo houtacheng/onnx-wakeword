@@ -19,7 +19,9 @@ import onnxruntime as ort
 SAMPLE_RATE = 16000
 MEL_HOP = 160
 MEL_WIN = 400
-N_MELS = 32
+RAW_MELS = 32   # mel spectrogram output channels (unchanged)
+N_MELS = 34      # classifier input: 32 mel + 2 hidden (zero-padded at runtime)
+HIDDEN_PAD = 2
 MAX_GAP = 2  # L1 consecutive-frames gap tolerance, matches android DetectionLogic
 
 
@@ -78,9 +80,10 @@ class WakeWordEngine:
             header = f.read(4)
         if header[:2] == b'PK':
             import zipfile
-            with zipfile.ZipFile(model_info_path, 'r') as zf:
-                info = json.loads(zf.read('model_info.json'))
-                self._zip = zf
+            # Keep the archive open — model .onnx bytes are read from it below.
+            zf = zipfile.ZipFile(model_info_path, 'r')
+            info = json.loads(zf.read('model_info.json'))
+            self._zip = zf
         else:
             info = json.load(open(model_info_path, 'r', encoding='utf-8'))
             self._zip = None
@@ -149,7 +152,8 @@ class WakeWordEngine:
             for f in range(self.dscnn_mel_time):
                 src = start + f
                 if 0 <= src < frames:
-                    dscnn_in[0, f] = mel2d[src]
+                    # Copy first RAW_MELS channels, last HIDDEN_PAD stay zero
+                    dscnn_in[0, f, :RAW_MELS] = mel2d[src]
             # Multi-keyword: single model, single inference -> [1, N]
             if self.is_multi_keyword:
                 out = self.multi_kw_session.run(None, {'input': dscnn_in})

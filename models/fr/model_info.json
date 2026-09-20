@@ -1,10 +1,10 @@
 {
-  "model_type": "tcn",
+  "model_type": "multi_keyword",
+  "keywords": [
+    "Salut Nova"
+  ],
+  "model_file": "salutnova_r1.onnx",
   "mel_time": 98,
-  "version": "9.3",
-  "multi_model": true,
-  "models": [
-    {"wake_word": "Monsieur Sadin", "model_file": "monsieur_sadin.onnx", "cons_frames": 3},
-    {"wake_word": "Croissant", "model_file": "croissant.onnx", "cons_frames": 3}
-  ]
+  "cons_frames": 3,
+  "n_mels": 32
 }

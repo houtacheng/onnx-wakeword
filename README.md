@@ -73,15 +73,19 @@ Held-out Azure TTS, 400 samples × varied speed/pitch/volume; sliding-window pea
 | Keyword | Language | Recall |
 |---------|:-------:|:------:|
 | 你好小娜 (optimized) | ZH | 100% |
+| Hey Jarvis (optimized) | EN | 99.0% |
+| Salut Nova (optimized) | FR | 100% |
+| Apfelstrudel (optimized) | DE | 98.5% |
+| みらい (optimized) | JA | 100% |
 | 小娜 (optimized) | ZH | 98.3% |
 | 豆包豆包 (optimized) | ZH | 100% |
 | Hey Robot | EN | 100% |
 | サクラ (Sakura) | JA | 100% |
-| Apfelstrudel | DE | 99.4% |
+| Apfelstrudel (base) | DE | 99.4% |
 | Monsieur Sadin | FR | 100% |
 | Croissant | FR | 90.3% |
 
-> Chinese rows are false-trigger optimized models; non-Chinese rows are base demo models (false-trigger optimization in development & testing).
+> "(optimized)" rows are false-trigger optimized models (hard-negative mining retrain, see below); unmarked rows are base demo models.
 
 > Across 20 recently trained keywords (5 languages): recall 90.3%–100%, mean 98.8%, 20/20 ≥ 90%.
 
@@ -89,17 +93,19 @@ Held-out Azure TTS, 400 samples × varied speed/pitch/volume; sliding-window pea
 
 ### False trigger control
 
-**False-trigger optimization: before vs after** (same held-out corpus: 1/10 split of the mining corpus, 15.4 hours of speech/music/mixed audio; bare model, threshold 0.5, 40ms sliding window, counted per triggered file):
+**False-trigger optimization: before vs after** (each keyword measured on its own held-out negative corpus — same-language Common Voice read speech + music + household noise/silence, held out from training; bare model, threshold 0.5, 40ms sliding window, counted per triggered file):
 
-| Keyword | Before (triggers/h) | After (triggers/h) | Reduction | Recall |
-|---------|---:|---:|---:|---|
-| 你好小娜 | 221.9 | 10.0 | −95.5% | 100% → 100% |
-| 小娜 | 329.5 | 7.3 | −97.8% | 98.5% → 98.3% |
-| 豆包豆包 | 81.3 | 7.2 | −91.2% | 100% → 100% |
+| Keyword | Corpus | Before (triggers/h) | After (triggers/h) | Reduction | Recall |
+|---------|---:|---:|---:|---:|---|
+| 你好小娜 | 16.0h | 74.5 | 3.5 | −95.3% | 97.8% → 100% |
+| Hey Jarvis | 26.9h | 44.6 | 4.8 | −89.2% | 100% → 99.0% |
+| Salut Nova | 22.6h | 222.7 | 4.5 | −98.0% | 100% → 100% |
+| Apfelstrudel | 24.4h | 265.3 | 2.7 | −99.0% | 97.0% → 98.5% |
+| みらい | 12.1h | 330.9 | 5.1 | −98.5% | 97.8% → 100% |
 
-> Numbers above are measured on the **hard-negative held-out corpus** (speech + music + mixed audio, deliberately selected easily-mis-triggered content) — the **worst case**. On clean public read speech (AISHELL-1) the rates are lower (你好小娜: baseline 278.7 → optimized 0.6 triggers/hour).
+> Numbers above are measured on **keyword-specific held-out corpora** (same-language Common Voice read speech + music + noise/silence, held out from training) — deliberately realistic mixtures, close to **worst case**. On clean public read speech (AISHELL-1, 5000-clip sample) the optimized 你好小娜 drops to **0.8 triggers/hour** (baseline: 35.5).
 
-> All tables above are **bare-model** numbers (detection layers off). The runtime anti-false-trigger layers cut the rate further — with L1 consecutive-frames only (on by default), the optimized 你好小娜 drops from 10.3 to **4.9 triggers/hour** on a 10-hour general Chinese speech/music corpus, before stacking any other layer (L3/L5/...).
+> All tables above are **bare-model** numbers (detection layers off). The runtime anti-false-trigger layers cut the rate further — with L1 consecutive-frames only (on by default), the optimized 你好小娜 drops from 3.5 to **2.3 triggers/hour** (cons=2) or **1.0** (cons=3) on its 16-hour held-out corpus, before stacking any other layer (L3/L5/...).
 
 > **False-trigger optimized edition**: once a keyword model is trained, one click starts the optimization — the trained model scans its negative audio corpus, finds the segments it wrongly scores as wake words (hard negatives), and retrains with them. The model learns from its own mistakes; **no user-reported audio is required**, and recall is preserved (−91% to −98% in a single round, table above).
 
@@ -111,17 +117,51 @@ My Models → False-Trigger Optimization → Negative scan → Full retrain → 
 
 The downloaded R1 model is the false-trigger optimized edition. It loads exactly like the base model (same `model_info.json` and runtime code — no code changes needed) and runs fully offline as usual.
 
-Comparison models included in this repo (`models/zh/`):
+Comparison model pairs included in this repo (`models/<lang>/`):
 
-| Keyword | Baseline (`*_r0.onnx`) | Optimized (`*_r1.onnx`) |
-|---------|---------|---------|
-| 你好小娜 | `nihaoxiaona_r0.onnx` | `nihaoxiaona_r1.onnx` |
-| 小娜 | `xiaona_r0.onnx` | `xiaona_r1.onnx` |
-| 豆包豆包 | `doubaodoubao_r0.onnx` | `doubaodoubao_r1.onnx` |
+| Keyword | Language | Baseline (`*_r0.onnx`) | Optimized (`*_r1.onnx`) |
+|---------|:-------:|---------|---------|
+| 你好小娜 | ZH | `nihaoxiaona_r0.onnx` | `nihaoxiaona_r1.onnx` |
+| Hey Jarvis | EN | `heyjarvis_r0.onnx` | `heyjarvis_r1.onnx` |
+| Salut Nova | FR | `salutnova_r0.onnx` | `salutnova_r1.onnx` |
+| Apfelstrudel | DE | `apfelstrudel_r0.onnx` | `apfelstrudel_r1.onnx` |
+| みらい | JA | `mirai_r0.onnx` | `mirai_r1.onnx` |
 
-> False-trigger optimization is currently production-verified on **Chinese** keywords; **English / Japanese / French / German: in development & testing.**
+> False-trigger optimization is production-verified on **all five supported languages** (Chinese, English, Japanese, French, German); the optimization flow (negative scan + full retrain) takes ~40–80 minutes in practice.
 
 > Training takes ~30 minutes per keyword. Currently supports Chinese, English, Japanese, French, and German (5 languages).
+
+---
+
+## Multi-keyword Models
+
+**One model recognizes multiple keywords**: a single inference outputs the probabilities of all keywords at once — no need to run a separate model per keyword. All keywords share one backbone; each extra keyword adds only ~0.8KB of head weights. A 3-keyword model is ~135KB, and even a 10-command model is only ~167KB — still ESP32-friendly.
+
+### Multi wake word
+
+Multiple ways of saying the same wake word, packed into one model — every variant wakes the device:
+
+| Package | Keywords |
+|---------|---------|
+| `models/zh/multi_xiaona_v9.3.zip` | 小娜 · 你好小娜 · 小娜小娜 |
+| `models/en/multi_jarvis_v9.3.zip` | Hey Jarvis · Jarvis · Hi Jarvis |
+| `models/de/multi_martina_v9.3.zip` | Martina · Tina · Hey Tina |
+
+### Voice control
+
+Ten media commands in a single model:
+
+| Package | Keywords |
+|---------|---------|
+| `models/zh/multi_commands_v9.3.zip` | 播放 · 暂停 · 下一首 · 上一首 · 开始播放 · 停止播放 · 声音大一点 · 声音小一点 · 静音 · 继续播放 |
+
+ZIP packages load **directly, no extraction needed** (Python and Web engines detect ZIP automatically):
+
+```python
+engine.load('models/zh/multi_commands_v9.3.zip', 'models/melspectrogram.onnx')
+```
+
+The callback returns the matched keyword and its confidence (see the per-platform examples in Usage below). Custom multi-keyword models are trained at [voicute.com](https://www.voicute.com).
 
 ---
 
@@ -163,6 +203,8 @@ Multi-keyword:
   "n_mels": 32
 }
 ```
+
+Multi-keyword demo models are included in `models/` — see the **Multi-keyword Models** section above.
 
 ---
 
@@ -260,7 +302,7 @@ onnx-wakeword/
 ├── wyoming/     # Home Assistant (Wyoming protocol service)
 ├── ha-addon/    # Home Assistant add-on
 ├── Dockerfile   # Docker image (voicute/voicute-wyoming)
-└── models/      # Demo models + false-trigger optimization pairs
+└── models/      # Demo models, multi-keyword packages, false-trigger optimization pairs
 ```
 
 ---
