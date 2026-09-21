@@ -135,7 +135,7 @@ Comparison model pairs included in this repo (`models/<lang>/`):
 
 ## Multi-keyword Models
 
-**One model recognizes multiple keywords**: a single inference outputs the probabilities of all keywords at once — no need to run a separate model per keyword. All keywords share one backbone; each extra keyword adds only ~0.8KB of head weights. A 3-keyword model is ~135KB, and even a 10-command model is only ~167KB — still ESP32-friendly.
+**One model recognizes multiple keywords**: a single inference outputs the probabilities of all keywords at once — no need to run a separate model per keyword. All keywords share one backbone; each extra keyword adds only ~0.8KB of head weights. A 3-keyword model is ~135KB, and even a 10-command model is only ~167KB.
 
 ### Multi wake word
 

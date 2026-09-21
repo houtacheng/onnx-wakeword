@@ -96,7 +96,7 @@ engine.load('models/zh/multi_commands_v9.3.zip', 'models/melspectrogram.onnx')
 
 ### Multi-keyword (single model, recommended)
 
-One ONNX model outputs N keyword probabilities in a single inference. Model size: 130–167 KB for 2–10 keywords. Supports Android / Web / Python / ESP32. See the demo packages above for ready-to-load examples.
+One ONNX model outputs N keyword probabilities in a single inference. Model size: 130–167 KB for 2–10 keywords. Supports Android / Web / Python. See the demo packages above for ready-to-load examples.
 
 ```json
 {
