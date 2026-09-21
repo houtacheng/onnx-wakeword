@@ -77,6 +77,7 @@
   <div class="sub">端侧推理 · ONNX Runtime Web · 本地运行不联网</div>
 
   <div class="model-tags" id="modelTags"></div>
+  <div id="modelInfo" style="font-size:11px;color:#666;text-align:center;margin-bottom:8px;"></div>
 
   <div class="status-bar">
     <div class="dot" id="statusDot"></div>
@@ -192,12 +193,11 @@ l5Delta.oninput = () => {
     logStatus('ORT 就绪, 初始化...');
     engine = VoicuteWakeWord.create();
     logStatus('加载模型配置...');
-    await engine.load(
-      'models/multi_N10_b478cd_v9.3_demo.zip',
-      'models/melspectrogram.onnx'
-    );
+    const MODEL_ZIP = 'models/hey_limi_v9.3_voice_r4-enhanced.zip';
+    await engine.load(MODEL_ZIP, 'models/melspectrogram.onnx');
     const models = engine.getModels();
     modelTags.innerHTML = models.map(m => `<span class="tag active">${m.name}</span>`).join('');
+    document.getElementById('modelInfo').textContent = MODEL_ZIP + ' — v9.3 voice r4-enhanced (24K params, 128KB)';
     logStatus('模型加载完成: ' + models.map(m=>m.name).join(', '));
 
     btnToggle.disabled = false;

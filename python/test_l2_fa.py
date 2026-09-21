@@ -20,7 +20,8 @@ from detection_logic import DetectionLogic
 SAMPLE_RATE = 16000
 MEL_HOP = 160          # 10ms at 16kHz
 MEL_WIN = 400          # 25ms at 16kHz
-N_MELS = 32
+RAW_MELS = 32
+N_MELS = 34   # classifier input: 32 mel + 2 hidden (zero-padded at runtime)
 MEL_TIME = 98          # ~1.0s window
 AUDIO_WIN = (MEL_TIME - 1) * 160 + 512 + 160  # = 16192, matches training AUDIO_TARGET_98
 HOP_SAMPLES = int(0.04 * SAMPLE_RATE)  # 40ms stride (matches 4-frame hop in Android)
@@ -50,6 +51,11 @@ def run_test(model_path, mel_path, wav_files, thr=0.5, cons_frames=2, max_files=
     # Load ONNX models
     mel_sess = ort.InferenceSession(mel_path, providers=["CPUExecutionProvider"])
     model_sess = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+
+    # Infer mel bins from model input shape ([1, 98, 32] → 32; [1, 98, 34] → 34)
+    model_in_shape = model_sess.get_inputs()[0].shape
+    n_mels = int(model_in_shape[2]) if isinstance(model_in_shape[2], int) else N_MELS
+    print(f"Model input: {model_in_shape}  (n_mels={n_mels})")
 
     dl = DetectionLogic(thr=thr, cons_frames=cons_frames)
     dl.l1, dl.l2, dl.l3, dl.l4, dl.l5 = l1, l2, l3, l4, l5
@@ -95,17 +101,17 @@ def run_test(model_path, mel_path, wav_files, thr=0.5, cons_frames=2, max_files=
             if frames < 1:
                 continue
 
-            # Build TCN input: last MEL_TIME frames, shape [1, 98, 32]
+            # Build TCN input: last MEL_TIME frames, shape [1, 98, n_mels]
             mel_data = mel_out[0, 0]  # [frames, 32], typically 99 frames
             frames = mel_data.shape[0]
             mel_data = mel_data / 10.0 + 2.0  # standard preprocessing
 
             mel_start = max(0, frames - MEL_TIME)
-            tcn_input = np.zeros((1, MEL_TIME, N_MELS), dtype=np.float32)
+            tcn_input = np.zeros((1, MEL_TIME, n_mels), dtype=np.float32)
             for f in range(MEL_TIME):
                 src_f = mel_start + f
                 if src_f < frames:
-                    tcn_input[0, f, :] = mel_data[src_f, :]
+                    tcn_input[0, f, :RAW_MELS] = mel_data[src_f, :]
 
             # Model inference
             model_out = model_sess.run(None, {"input": tcn_input})[0]
@@ -150,6 +156,11 @@ def run_test(model_path, mel_path, wav_files, thr=0.5, cons_frames=2, max_files=
 
 
 def main():
+    # Windows consoles may default to a legacy codepage (e.g. cp1252) that
+    # cannot encode the Δ symbol used in the summary output
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="Test L2 detection on AISHELL")
     parser.add_argument("--model", default="../models/manbo.onnx", help="Wake word ONNX model")
     parser.add_argument("--mel", default="../models/melspectrogram.onnx", help="Melspectrogram ONNX model")

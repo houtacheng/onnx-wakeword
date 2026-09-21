@@ -11,7 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from detection_logic import DetectionLogic
 
 SAMPLE_RATE = 16000
-MEL_TIME, N_MELS = 98, 32
+MEL_TIME, RAW_MELS = 98, 32
+N_MELS = 34   # classifier input: 32 mel + 2 hidden (zero-padded at runtime)
 AUDIO_WIN = (MEL_TIME - 1) * 160 + 512 + 160  # 16192
 HOP = int(0.04 * SAMPLE_RATE)
 
@@ -56,7 +57,7 @@ def sweep_file(fpath, mel_sess, model_sessions, thr=0.5, cons=2):
         for f in range(MEL_TIME):
             src_f = mel_start + f
             if src_f < frames:
-                tcn_in[0, f, :] = mel_data[src_f, :]
+                tcn_in[0, f, :RAW_MELS] = mel_data[src_f, :]
 
         for name, sess in model_sessions.items():
             prob = float(sess.run(None, {"input": tcn_in})[0][0, 0])

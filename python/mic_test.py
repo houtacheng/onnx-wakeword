@@ -13,7 +13,8 @@ import onnxruntime as ort, sounddevice as sd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from detection_logic import DetectionLogic
 
-MEL_TIME, N_MELS = 98, 32
+MEL_TIME, RAW_MELS = 98, 32
+N_MELS = 34   # classifier input: 32 mel + 2 hidden (zero-padded at runtime)
 AUDIO_WIN = (MEL_TIME - 1) * 160 + 512 + 160
 HOP, SR = 640, 16000
 
@@ -108,7 +109,7 @@ def main():
         tcn_in = np.zeros((1, MEL_TIME, N_MELS), dtype=np.float32)
         for f in range(MEL_TIME):
             s = ms + f
-            if s < fr: tcn_in[0, f, :] = mel_data[s, :]
+            if s < fr: tcn_in[0, f, :RAW_MELS] = mel_data[s, :]
 
         prob = float(model.run(None, {'input': tcn_in})[0][0, 0])
         rms = float(np.sqrt(np.mean(chunk ** 2)))

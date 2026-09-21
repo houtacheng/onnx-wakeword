@@ -1,0 +1,86 @@
+D:\code\voicute\onnx-wakeword\python\test_l2_fa.py:118: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  prob = float(model_out[0]) if model_out.ndim <= 2 else float(model_out[0, 0])
+AISHELL dir: ../../data/negative/aishell/data_aishell/wav/test
+WAV files: 2472
+Model: ../models/zh/nihaoxiaona_r1.onnx
+Mel: ../models/melspectrogram.onnx
+
+============================================================
+TEST 1: Raw (L1=off, L2=off)
+============================================================
+Model input: ['batch', 98, 32]  (n_mels=32)
+  [500/2472] 0.6h  FA=2  FA/h=3.3  bg=0.0007  windows=42418  elapsed=105s
+  [1000/2472] 1.3h  FA=2  FA/h=1.5  bg=0.0007  windows=92034  elapsed=240s
+  [1500/2472] 2.0h  FA=2  FA/h=1.0  bg=0.0006  windows=145298  elapsed=355s
+  [2000/2472] 2.7h  FA=2  FA/h=0.7  bg=0.0008  windows=197053  elapsed=490s
+
+============================================================
+Files: 2472  |  Skipped: 0
+Duration: 3.33h  |  Windows: 238764
+FA: 2  |  FA/h: 0.6
+Config: thr=0.5 cons=2  L1=off L2=off L3=off L4=off L5=off
+Final bg=0.0007  |  Time: 605s
+============================================================
+
+============================================================
+TEST 2: L2 only (L1=off, L2=on)
+============================================================
+Model input: ['batch', 98, 32]  (n_mels=32)
+  [500/2472] 0.6h  FA=2  FA/h=3.3  bg=0.0007  windows=42418  elapsed=93s
+  [1000/2472] 1.3h  FA=2  FA/h=1.5  bg=0.0007  windows=92034  elapsed=206s
+  [1500/2472] 2.0h  FA=2  FA/h=1.0  bg=0.0006  windows=145298  elapsed=326s
+  [2000/2472] 2.7h  FA=2  FA/h=0.7  bg=0.0008  windows=197053  elapsed=443s
+
+============================================================
+Files: 2472  |  Skipped: 0
+Duration: 3.33h  |  Windows: 238764
+FA: 2  |  FA/h: 0.6
+Config: thr=0.5 cons=2  L1=off L2=on L3=off L4=off L5=off
+Final bg=0.0007  |  Time: 538s
+============================================================
+
+============================================================
+TEST 3: L1 only (L1=on, L2=off)
+============================================================
+Model input: ['batch', 98, 32]  (n_mels=32)
+  [500/2472] 0.6h  FA=1  FA/h=1.6  bg=0.0007  windows=42418  elapsed=90s
+  [1000/2472] 1.3h  FA=1  FA/h=0.8  bg=0.0007  windows=92034  elapsed=189s
+  [1500/2472] 2.0h  FA=1  FA/h=0.5  bg=0.0006  windows=145298  elapsed=289s
+  [2000/2472] 2.7h  FA=1  FA/h=0.4  bg=0.0008  windows=197053  elapsed=385s
+
+============================================================
+Files: 2472  |  Skipped: 0
+Duration: 3.33h  |  Windows: 238764
+FA: 1  |  FA/h: 0.3
+Config: thr=0.5 cons=2  L1=on L2=off L3=off L4=off L5=off
+Final bg=0.0007  |  Time: 469s
+============================================================
+
+============================================================
+TEST 4: L1+L2 (L1=on, L2=on)
+============================================================
+Model input: ['batch', 98, 32]  (n_mels=32)
+  [500/2472] 0.6h  FA=1  FA/h=1.6  bg=0.0007  windows=42418  elapsed=94s
+  [1000/2472] 1.3h  FA=1  FA/h=0.8  bg=0.0007  windows=92034  elapsed=198s
+  [1500/2472] 2.0h  FA=1  FA/h=0.5  bg=0.0006  windows=145298  elapsed=311s
+  [2000/2472] 2.7h  FA=1  FA/h=0.4  bg=0.0008  windows=197053  elapsed=462s
+
+============================================================
+Files: 2472  |  Skipped: 0
+Duration: 3.33h  |  Windows: 238764
+FA: 1  |  FA/h: 0.3
+Config: thr=0.5 cons=2  L1=on L2=on L3=off L4=off L5=off
+Final bg=0.0007  |  Time: 603s
+============================================================
+
+============================================================
+SUMMARY
+============================================================
+  Raw:      FA/h=0.6
+  L2 only:  FA/h=0.6  (Δ = 0.0)
+  L1 only:  FA/h=0.3
+  L1+L2:    FA/h=0.3  (Δ from L1 only = 0.0)
+
+  L2 contribution:
+    L2-only reduction:  0.0 (0%)
+    L2-on-L1 reduction:  0.0 (0%)

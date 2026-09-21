@@ -39,7 +39,8 @@ public class WakeWordEngine {
     static final float MEL_HOP_SEC = 0.010f;
     static final float MEL_WIN_SEC = 0.025f;
     static final int MEL_HOP_SAMPLES = (int) (SAMPLE_RATE * MEL_HOP_SEC);
-    static final int N_MELS = 32;
+    static final int N_MELS = 34;      // classifier input: 32 mel + 2 hidden (zero-padded at runtime)
+    static final int RAW_MELS = 32;     // mel spectrogram output channels (unchanged)
 
     /** Detection result with specific wake word name. */
     public static class DetectionResult {
@@ -245,14 +246,14 @@ public class WakeWordEngine {
             if (frames < dscnnMelTime / 4) return null;  // need at least some frames
 
             // 3. Apply transform: x/10 + 2
-            float[][] mel2d = new float[frames][N_MELS];
+            float[][] mel2d = new float[frames][RAW_MELS];
             for (int f = 0; f < frames; f++) {
-                for (int m = 0; m < N_MELS; m++) {
+                for (int m = 0; m < RAW_MELS; m++) {
                     mel2d[f][m] = mel[0][0][f][m] / 10.0f + 2.0f;
                 }
             }
 
-            // 4. Prepare classifier input
+            // 4. Prepare classifier input with hidden zero-channel padding
             // Skip first 3s to avoid cold-start false triggers
             if (System.currentTimeMillis() - engineStartTime < STARTUP_SKIP_MS) return null;
 
@@ -261,11 +262,12 @@ public class WakeWordEngine {
             for (int f = 0; f < dscnnMelTime; f++) {
                 int srcF = melStart + f;
                 if (srcF >= 0 && srcF < frames) {
-                    System.arraycopy(mel2d[srcF], 0, dscnnInput[0][f], 0, N_MELS);
+                    // Copy first RAW_MELS channels, last HIDDEN_PAD stay zero
+                    System.arraycopy(mel2d[srcF], 0, dscnnInput[0][f], 0, RAW_MELS);
                 }
             }
 
-            // Flatten to 1D
+            // Flatten to 1D (includes hidden padding)
             float[] flatInput = new float[dscnnMelTime * N_MELS];
             for (int f = 0; f < dscnnMelTime; f++) {
                 System.arraycopy(dscnnInput[0][f], 0, flatInput, f * N_MELS, N_MELS);

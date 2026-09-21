@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>多关键词测试</title></head>
+<body style="font-family:sans-serif;padding:20px;background:#1a1a2e;color:#eee">
+<h2>多关键词测试 — 小娜 / 你好小娜 / 小娜小娜</h2>
+<p>状态: <span id="status">加载中...</span></p>
+<p>最近检测: <span id="detect" style="color:#e94560;font-size:1.5em">—</span></p>
+<pre id="log" style="background:#16213e;padding:10px;max-height:400px;overflow-y:auto;font-size:12px"></pre>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+<script src="wakeword.js"></script>
+<script>
+const e = VoicuteWakeWord.create();
+const logEl = document.getElementById('log');
+function log(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+
+(async () => {
+  document.getElementById('status').textContent = '加载模型中...';
+  await e.load('models/model_info.json', 'models/melspectrogram.onnx');
+  document.getElementById('status').textContent = '已加载 ' + e.getModels().length + ' 个关键词: ' + e.getModels().map(m=>m.name).join(', ');
+  log('模型加载成功');
+  log('关键词: ' + e.getModels().map(m=>m.name).join(', '));
+  
+  e.setThreshold(0.4);
+  e.setDebug(true);
+  
+  await e.start((word, prob, info) => {
+    document.getElementById('detect').textContent = word + ' (' + (prob*100).toFixed(0) + '%)';
+    log('检测: ' + word + ' prob=' + prob.toFixed(3) + ' rms=' + (info.rms||0).toFixed(0));
+    if (info.all) {
+      const top3 = Object.entries(info.all).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+'='+v.toFixed(3)).join(' ');
+      log('  top3: ' + top3);
+    }
+  });
+  log('麦克风已启动 — 请说唤醒词');
+})();
+</script>
+</body></html>

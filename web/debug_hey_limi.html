@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>hey limi Debug</title></head>
+<body>
+<h2>hey limi Model Debug</h2>
+<div>
+  <input type="file" id="wavFile" accept=".wav">
+  <button onclick="testFile()">Test WAV</button>
+  <button onclick="testMic()">Start Mic Monitor</button>
+  <button onclick="stopMic()">Stop Mic</button>
+</div>
+<pre id="log" style="background:#111;color:#0f0;padding:10px;font-family:monospace;height:400px;overflow-y:auto;"></pre>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script>
+const log = (msg) => {
+  const el = document.getElementById('log');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+};
+
+const N_MELS = 32, MEL_TIME = 98, MEL_HOP = 160, MEL_WIN = 400;
+
+let melSession = null, modelSession = null;
+let audioCtx = null, stream = null, listening = false;
+
+async function loadModels() {
+  log('Loading models...');
+  melSession = await ort.InferenceSession.create(
+    await (await fetch('models/melspectrogram.onnx')).arrayBuffer(),
+    { executionProviders: ['wasm'] }
+  );
+  modelSession = await ort.InferenceSession.create(
+    await (await fetch('models/hey_limi.onnx')).arrayBuffer(),
+    { executionProviders: ['wasm'] }
+  );
+  log('Models loaded OK');
+  log('Model input: ' + JSON.stringify(modelSession.inputNames));
+}
+
+async function runInference(float32Audio) {
+  // float32Audio: 16kHz, float samples in [-1, 1] or int16 range
+  const melIn = new ort.Tensor('float32', float32Audio, [1, float32Audio.length]);
+  const melOut = await melSession.run({ input: melIn });
+  const mel = melOut[Object.keys(melOut)[0]].data;
+  const frames = Math.floor(mel.length / N_MELS);
+
+  // Normalize + build input (last MEL_TIME frames)
+  const mel2d = new Float32Array(frames * N_MELS);
+  for (let i = 0; i < frames * N_MELS; i++) mel2d[i] = mel[i] / 10 + 2;
+
+  const start = Math.max(0, frames - MEL_TIME);
+  const input = new Float32Array(MEL_TIME * N_MELS);
+  for (let f = 0; f < MEL_TIME; f++) {
+    const s = start + f;
+    if (s >= 0 && s < frames) input.set(mel2d.subarray(s * N_MELS, (s+1) * N_MELS), f * N_MELS);
+  }
+
+  const out = await modelSession.run({
+    input: new ort.Tensor('float32', input, [1, MEL_TIME, N_MELS])
+  });
+  // ONNX output IS already sigmoid probability — no need to re-sigmoid
+  const prob = out[Object.keys(out)[0]].data[0];
+  return { prob, frames, start, melLen: mel.length };
+}
+
+async function testFile() {
+  await loadModels();
+  const file = document.getElementById('wavFile').files[0];
+  if (!file) { log('Select a WAV file'); return; }
+
+  log('\n--- Testing: ' + file.name + ' ---');
+
+  const arrayBuffer = await file.arrayBuffer();
+  const audioCtx2 = new AudioContext({ sampleRate: 16000 });
+  const audioBuffer = await audioCtx2.decodeAudioData(arrayBuffer);
+  audioCtx2.close();
+
+  const audio = audioBuffer.getChannelData(0);
+  log('WAV: ' + audioBuffer.sampleRate + 'Hz, ' + audio.length + ' samples, ' + (audio.length/16000).toFixed(2) + 's');
+
+  // Test with sliding window
+  const chunkSize = MEL_TIME * MEL_HOP + MEL_WIN; // 16080
+  const stride = Math.round(0.05 * 16000); // 800
+
+  let maxProb = 0, nAbove = 0, nTotal = 0;
+  for (let pos = chunkSize; pos < audio.length; pos += stride) {
+    const chunk = audio.slice(pos - chunkSize, pos);
+    if (chunk.length < chunkSize) continue;
+
+    const result = await runInference(chunk);
+    nTotal++;
+    if (result.prob > 0.5) nAbove++;
+    if (result.prob > maxProb) maxProb = result.prob;
+  }
+
+  log('Sliding window: ' + nAbove + '/' + nTotal + ' above 0.5, max=' + maxProb.toFixed(4));
+
+  // Test whole file
+  if (audio.length >= chunkSize) {
+    const wholeChunk = audio.slice(0, chunkSize);
+    const r = await runInference(wholeChunk);
+    log('First chunk: prob=' + r.prob.toFixed(4) + ' raw=' + r.raw.toFixed(4) + ' frames=' + r.frames + ' start=' + r.start);
+  }
+
+  // Test padded
+  const padded = new Float32Array(Math.max(audio.length, chunkSize));
+  padded.set(audio);
+  const r2 = await runInference(padded);
+  log('Padded: prob=' + r2.prob.toFixed(4) + ' raw=' + r2.raw.toFixed(4) + ' frames=' + r2.frames + ' start=' + r2.start);
+}
+
+async function testMic() {
+  await loadModels();
+  if (listening) { log('Already listening'); return; }
+
+  stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  audioCtx = new AudioContext();
+  const hw = audioCtx.sampleRate;
+  log('Mic: ' + hw + 'Hz');
+
+  const needed = Math.ceil((MEL_TIME * MEL_HOP + MEL_WIN) / 16000 * hw);
+  const ringBuf = new Float32Array(hw * 3);
+  let ringPos = 0, collected = 0;
+
+  const src = audioCtx.createMediaStreamSource(stream);
+  const proc = audioCtx.createScriptProcessor(2048, 1, 1);
+  let busy = false;
+
+  let nInfer = 0;
+
+  proc.onaudioprocess = async (e) => {
+    if (!listening || busy) return;
+    const input = e.inputBuffer.getChannelData(0);
+    for (let i = 0; i < input.length; i++) {
+      ringBuf[ringPos] = input[i] * 32767;
+      ringPos = (ringPos + 1) % ringBuf.length;
+    }
+    collected += input.length;
+    if (collected < needed) return;
+
+    busy = true;
+    // Extract last `needed` samples
+    const raw = new Float32Array(needed);
+    for (let i = 0; i < needed; i++) {
+      raw[i] = ringBuf[(ringPos - needed + i + ringBuf.length) % ringBuf.length];
+    }
+
+    // Resample
+    const r = hw / 16000;
+    const nl = Math.round(needed / r);
+    const chunk = new Float32Array(nl);
+    for (let i = 0; i < nl; i++) {
+      const src = i * r;
+      const lo = Math.floor(src);
+      const hi = Math.min(lo + 1, needed - 1);
+      const f = src - lo;
+      chunk[i] = raw[lo] * (1 - f) + raw[hi] * f;
+    }
+
+    try {
+      const result = await runInference(chunk);
+      nInfer++;
+      if (nInfer % 20 === 0 || result.prob > 0.3) {
+        log('#' + nInfer + ' prob=' + result.prob.toFixed(4) + ' raw=' + result.raw.toFixed(4) + (result.prob > 0.4 ? ' ***' : ''));
+      }
+    } catch(e) { log('ERROR: ' + e.message); }
+    busy = false;
+  };
+
+  src.connect(proc);
+  proc.connect(audioCtx.destination);
+  listening = true;
+  log('Mic monitoring started...');
+}
+
+function stopMic() {
+  listening = false;
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  log('Mic stopped');
+}
+
+// Auto-load models
+loadModels();
+</script>
+</body></html>

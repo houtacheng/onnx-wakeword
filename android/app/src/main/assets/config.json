@@ -1,13 +1,27 @@
 {
-  "wake_word": "打开灯光",
-  "arch": "causal-ds-tcn",
-  "params": 23281,
-  "val_accuracy": 0.9029,
-  "mel_config": {
-    "n_mels": 32,
-    "mel_time": 98
+  "model_type": "multi_keyword",
+  "keywords": [
+    "hi idonk",
+    "hey idonk",
+    "idonk"
+  ],
+  "model_file": "model.onnx",
+  "arch": "causal-ds-tcn-multi",
+  "K": 3,
+  "cons_frames": 2,
+  "mel_time": 98,
+  "n_mels": 32,
+  "params": {
+    "backbone": 23216,
+    "heads": {
+      "hi idonk": 773,
+      "hey idonk": 773,
+      "idonk": 773
+    },
+    "total_head": 2319,
+    "total": 25535
   },
   "model_size": {
-    "onnx_kb": 102.7
+    "onnx_kb": 134.7
   }
 }
