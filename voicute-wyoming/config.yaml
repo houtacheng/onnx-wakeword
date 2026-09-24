@@ -1,0 +1,28 @@
+name: Voicute Wake Word
+description: Voicute ONNX wake-word service using the Wyoming protocol
+version: "1.0.1"
+slug: voicute_wyoming
+url: https://github.com/houtacheng/onnx-wakeword
+arch:
+  - aarch64
+startup: services
+boot: auto
+init: false
+ports:
+  10400/tcp: 10400
+ports_description:
+  10400/tcp: Wyoming protocol
+options:
+  threshold: 0.4
+  cooldown: 1500
+  L1: 1
+  L3: 1
+  L5: 0
+  debug: false
+schema:
+  threshold: float(0.1,0.9)
+  cooldown: int(0,10000)
+  L1: int(0,1)
+  L3: int(0,1)
+  L5: int(0,1)
+  debug: bool

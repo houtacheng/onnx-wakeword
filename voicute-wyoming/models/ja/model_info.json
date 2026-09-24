@@ -1,0 +1,10 @@
+{
+  "model_type": "multi_keyword",
+  "keywords": [
+    "みらい"
+  ],
+  "model_file": "mirai_r1.onnx",
+  "mel_time": 98,
+  "cons_frames": 3,
+  "n_mels": 32
+}
