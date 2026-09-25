@@ -15,7 +15,7 @@ l3="$(option L3 1)"
 l5="$(option L5 0)"
 debug="$(option debug false)"
 
-set -- python /app/wyoming/wyoming_voicute.py \
+set -- python /app/wyoming/wyoming_voicute_ha.py \
     --uri tcp://0.0.0.0:10400 \
     --model-info /app/models/model_info.json \
     --mel /app/models/melspectrogram.onnx \

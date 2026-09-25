@@ -13,6 +13,7 @@ COPY run.sh /run.sh
 RUN pip install --no-cache-dir \
         numpy==1.26.4 \
         onnxruntime==1.16.3 \
+        "wyoming>=1.8,<2" \
     && chmod 0755 /run.sh
 
 LABEL org.opencontainers.image.source="https://github.com/houtacheng/onnx-wakeword" \

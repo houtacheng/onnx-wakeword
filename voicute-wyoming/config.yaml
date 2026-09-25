@@ -1,6 +1,6 @@
 name: Voicute Wake Word
 description: Voicute ONNX wake-word service using the Wyoming protocol
-version: "1.0.1"
+version: "1.0.2"
 slug: voicute_wyoming
 url: https://github.com/houtacheng/onnx-wakeword
 arch:
