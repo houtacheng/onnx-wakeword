@@ -11,7 +11,7 @@ import os
 import sys
 
 OPTIONS_PATH = "/data/options.json"
-SERVICE = "/app/wyoming/wyoming_voicute.py"
+SERVICE = "/app/wyoming/wyoming_voicute_ha.py"
 URI = "tcp://0.0.0.0:10400"
 
 # Defaults must stay in sync with config.yaml's `options` block.
